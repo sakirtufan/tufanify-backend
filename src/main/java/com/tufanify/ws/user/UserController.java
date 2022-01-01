@@ -10,8 +10,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.bind.validation.ValidationErrors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import javax.validation.Validation;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,32 +22,29 @@ import java.util.Map;
 @RestController
 public class UserController {
 
-//    private static final Logger log = LoggerFactory.getLogger(UserController.class);
-
     @Autowired
     UserService userService;
 
-
     @PostMapping("/api/1.0/users")
-    @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<?> createUser(@RequestBody User user){
-        ApiError error = new ApiError(400,"Validation error", "/api/1.0/users");
+
+    public GenericResponse createUser(@Valid @RequestBody User user) {
+        userService.save(user);
+        return new GenericResponse("user created");
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleValidationException(MethodArgumentNotValidException exception) {
+        ApiError error = new ApiError(400, "Validation error", "/api/1.0/users");
         Map<String, String> validationErrors = new HashMap<>();
 
-        String username = user.getUsername();
-        String displayName = user.getDisplayName();
 
-        if(username == null || username.isEmpty()){
-            validationErrors.put("username","Username cannot be null");
+        for (FieldError fieldError : exception.getBindingResult().getFieldErrors()) {
+            validationErrors.put(fieldError.getField(), fieldError.getDefaultMessage());
         }
-        if(displayName == null || displayName.isEmpty()){
-            validationErrors.put("displayName","Displaymame cannot be null");
-        }
-        if(validationErrors.size() > 0){
-            error.setValidationErrors(validationErrors);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-        }
-        userService.save(user);
-        return ResponseEntity.ok(new GenericResponse("User Created"));
+
+        error.setValidationErrors(validationErrors);
+        return error;
     }
+
 }
