@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
 @Constraint(validatedBy = { UniqueUsernameValidator.class})
 public @interface UniqueUsername {
 
-    String message() default "Username must be unique";
+    String message() default "{tufanify.constraint.username.UniqueUsername.message}";
 
     Class<?>[] groups() default {};
 
